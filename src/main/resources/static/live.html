@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Live Face Attendance</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #111827;
+            color: white;
+        }
+
+        video {
+            width: 640px;
+            max-width: 90%;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        button {
+            margin-top: 20px;
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #status {
+            margin-top: 20px;
+            font-size: 20px;
+        }
+
+        #progress {
+            margin-top: 10px;
+            font-size: 16px;
+        }
+
+        canvas {
+            display: none;
+        }
+
+        #overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .video-container {
+            position: relative;
+            display: inline-block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>Live Face Attendance</h1>
+
+<div class="video-container">
+    <video id="video" autoplay playsinline></video>
+    <canvas id="overlay"></canvas>
+</div>
+
+<canvas id="canvas"></canvas>
+
+<br>
+
+<button id="startButton">
+    Start Camera
+</button>
+
+<div id="status">
+    Camera not started
+</div>
+
+<div id="progress">
+    Liveness: 0%
+</div>
+
+<script>
+
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const overlay = document.getElementById("overlay");
+    const startButton = document.getElementById("startButton");
+    const statusText = document.getElementById("status");
+    const progressText = document.getElementById("progress");
+
+    let stream = null;
+    let running = false;
+
+    let previousLandmarks = null;
+
+    let movementFrames = 0;
+    let totalFrames = 0;
+    let blinkCount = 0;
+
+    const REQUIRED_MOVEMENT_FRAMES = 5;
+    const REQUIRED_BLINKS = 1;
+
+    // Face circle settings
+    const CIRCLE_RADIUS = 150;
+    let faceDetected = false;
+
+    // Generate unique session ID for liveness tracking
+    const sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+    startButton.addEventListener("click", startCamera);
+
+    function setupOverlay() {
+        overlay.width = video.videoWidth || 640;
+        overlay.height = video.videoHeight || 480;
+        overlay.style.width = video.offsetWidth + 'px';
+        overlay.style.height = video.offsetHeight + 'px';
+        drawFaceCircle(false);
+    }
+
+    function drawFaceCircle(isFaceInCircle) {
+        const ctx = overlay.getContext('2d');
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+        const centerX = overlay.width / 2;
+        const centerY = overlay.height / 2;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, CIRCLE_RADIUS, 0, 2 * Math.PI);
+
+        if (isFaceInCircle) {
+            ctx.strokeStyle = '#00ff00'; // Green when face is in circle
+            ctx.lineWidth = 5;
+        } else {
+            ctx.strokeStyle = '#ff0000'; // Red when no face
+            ctx.lineWidth = 5;
+        }
+
+        ctx.stroke();
+
+        // Add semi-transparent fill
+        ctx.fillStyle = isFaceInCircle ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)';
+        ctx.fill();
+    }
+
+    async function startCamera() {
+
+        try {
+
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 },
+                    height: { ideal: 480 },
+                    facingMode: "user"
+                },
+                audio: false
+            });
+
+            video.srcObject = stream;
+
+            running = true;
+
+            statusText.innerText =
+                "Camera started. Move your head naturally.";
+
+            startButton.disabled = true;
+
+            // Setup overlay canvas
+            setupOverlay();
+
+            processFrames();
+
+        } catch (error) {
+
+            console.error(error);
+
+            statusText.innerText =
+                "Camera permission denied or camera unavailable.";
+        }
+    }
+
+
+    async function processFrames() {
+
+        while (running) {
+
+            if (video.readyState >= 2) {
+
+                await captureAndAnalyzeFrame();
+            }
+
+            // approximately 4 frames per second
+            await sleep(250);
+        }
+    }
+
+
+    async function captureAndAnalyzeFrame() {
+
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        if (width === 0 || height === 0) {
+            return;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+
+        context.drawImage(
+            video,
+            0,
+            0,
+            width,
+            height
+        );
+
+        const blob = await new Promise(resolve => {
+
+            canvas.toBlob(
+                resolve,
+                "image/jpeg",
+                0.8
+            );
+
+        });
+
+        const formData = new FormData();
+
+        formData.append(
+            "image",
+            blob,
+            "live-frame.jpg"
+        );
+
+        formData.append(
+            "sessionId",
+            sessionId
+        );
+
+        try {
+
+            const response = await fetch(
+                "/api/faces/liveness/check",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const result = await response.json();
+
+            totalFrames++;
+
+            if (result.facesDetected !== 1) {
+                faceDetected = false;
+                drawFaceCircle(false);
+                statusText.innerText =
+                    "Please keep exactly one face in the camera.";
+
+                return;
+            }
+
+            const landmarks = result.landmarks;
+
+            // Check if face is within the circle
+            const faceCenter = calculateFaceCenter(landmarks);
+            const isFaceInCircle = isPointInCircle(faceCenter, overlay.width / 2, overlay.height / 2, CIRCLE_RADIUS);
+
+            faceDetected = isFaceInCircle;
+            drawFaceCircle(isFaceInCircle);
+
+            if (!isFaceInCircle) {
+                statusText.innerText = "Please position your face within the circle";
+                return;
+            }
+
+            // Update blink and movement counts from server response
+            if (result.blinkDetected) {
+                blinkCount++;
+            }
+
+            if (result.movementDetected) {
+                movementFrames++;
+            }
+
+            // Update status based on liveness progress
+            let statusMessage = "Face detected in circle. ";
+            if (blinkCount < REQUIRED_BLINKS) {
+                statusMessage += "Please blink your eyes... ";
+            }
+            if (movementFrames < REQUIRED_MOVEMENT_FRAMES) {
+                statusMessage += "Move your head slightly... ";
+            }
+
+            statusText.innerText = statusMessage;
+
+            // Calculate overall liveness progress
+            const blinkProgress = Math.min(1, blinkCount / REQUIRED_BLINKS);
+            const movementProgress = Math.min(1, movementFrames / REQUIRED_MOVEMENT_FRAMES);
+            const overallProgress = Math.round((blinkProgress + movementProgress) / 2 * 100);
+
+            progressText.innerText =
+                "Liveness: " + overallProgress + "% (Blinks: " + blinkCount + "/" + REQUIRED_BLINKS + ", Movement: " + movementFrames + "/" + REQUIRED_MOVEMENT_FRAMES + ")";
+
+            console.log("Liveness:", result);
+
+            if (result.isLive) {
+                await verifyLiveFace();
+                running = false;
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Frame processing error:",
+                error
+            );
+        }
+    }
+
+
+    function calculateMovement(previous, current) {
+
+        let total = 0;
+
+        for (let i = 0; i < 5; i++) {
+
+            const dx =
+                current[i].x -
+                previous[i].x;
+
+            const dy =
+                current[i].y -
+                previous[i].y;
+
+            const distance =
+                Math.sqrt(
+                    dx * dx +
+                    dy * dy
+                );
+
+            total += distance;
+        }
+
+        return total / 5;
+    }
+
+    function calculateFaceCenter(landmarks) {
+        // Calculate center of face using landmarks
+        let sumX = 0;
+        let sumY = 0;
+
+        for (let i = 0; i < landmarks.length; i++) {
+            sumX += landmarks[i].x;
+            sumY += landmarks[i].y;
+        }
+
+        return {
+            x: sumX / landmarks.length,
+            y: sumY / landmarks.length
+        };
+    }
+
+    function isPointInCircle(point, circleCenterX, circleCenterY, radius) {
+        const dx = point.x - circleCenterX;
+        const dy = point.y - circleCenterY;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        return distance <= radius;
+    }
+
+
+    async function verifyLiveFace() {
+
+        statusText.innerText =
+            "Liveness passed. Recognizing...";
+
+        const width = video.videoWidth;
+        const height = video.videoHeight;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const context = canvas.getContext("2d");
+
+        context.drawImage(
+            video,
+            0,
+            0,
+            width,
+            height
+        );
+
+        const blob = await new Promise(resolve => {
+
+            canvas.toBlob(
+                resolve,
+                "image/jpeg",
+                0.9
+            );
+
+        });
+
+        const formData = new FormData();
+
+        formData.append(
+            "image",
+            blob,
+            "live-face.jpg"
+        );
+
+        try {
+
+            const response = await fetch(
+                "/api/faces/live-verify",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+            const result =
+                await response.json();
+
+            console.log(
+                "Recognition:",
+                result
+            );
+
+            if (result.recognized) {
+
+                statusText.innerText =
+                    "✓ Attendance marked PRESENT for " +
+                    result.name;
+
+                progressText.innerText =
+                    "Similarity: " +
+                    result.similarity.toFixed(3) +
+                    " | Time: " +
+                    result.attendanceTime;
+
+            } else {
+
+                statusText.innerText =
+                    "✗ Unknown person. Attendance not marked.";
+            }
+
+        } catch (error) {
+
+            console.error(error);
+
+            statusText.innerText =
+                "Recognition failed.";
+        }
+    }
+
+
+    function sleep(milliseconds) {
+
+        return new Promise(
+            resolve =>
+                setTimeout(
+                    resolve,
+                    milliseconds
+                )
+        );
+    }
+
+</script>
+
+</body>
+</html>
