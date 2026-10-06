@@ -1,4 +1,4 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,13 +24,12 @@
         body {
             font-family: "Segoe UI", Arial, sans-serif;
             min-height: 100vh;
-            background:
-                    radial-gradient(
-                            circle at top,
-                            #1e3a8a 0%,
-                            #0f172a 45%,
-                            #020617 100%
-                    );
+            background: radial-gradient(
+                    circle at top,
+                    #1e3a8a 0%,
+                    #0f172a 45%,
+                    #020617 100%
+            );
             color: #fff;
             padding: 20px;
         }
@@ -80,27 +79,28 @@
             border: 1px solid rgba(148, 163, 184, 0.18);
             border-radius: 26px;
             padding: 10px;
-            box-shadow:
-                    0 24px 60px rgba(0, 0, 0, 0.40),
-                    0 0 0 1px rgba(255, 255, 255, 0.02);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.40),
+            0 0 0 1px rgba(255, 255, 255, 0.02);
             backdrop-filter: blur(16px);
         }
 
         .camera-wrapper {
             position: relative;
+            width: min(360px, 90vw);
+            aspect-ratio: 1 / 1;
+            margin: 0 auto;
             overflow: hidden;
-            border-radius: 20px;
+            border-radius: 50%;
             background: #000;
-            box-shadow:
-                    inset 0 0 0 1px rgba(255, 255, 255, 0.06);
         }
 
-        video {
-            display: block;
+        #video {
             width: 100%;
-            aspect-ratio: 4 / 3;
+            height: 100%;
+            display: block;
             object-fit: cover;
-            background: #000;
+            border-radius: 90%;
+            transform: scaleX(-1);
         }
 
         .camera-overlay {
@@ -113,17 +113,15 @@
         }
 
         .face-guide {
-            width: 46%;
-            aspect-ratio: 1 / 1.2;
+            width: 92%;
+            aspect-ratio: 1 / 1;
             height: auto;
             border: 2px solid rgba(255, 255, 255, 0.75);
-            border-radius: 48% 48% 45% 45%;
-            box-shadow:
-                    0 0 0 9999px rgba(0, 0, 0, 0.08),
-                    0 0 24px rgba(255, 255, 255, 0.12);
-            transition:
-                    border-color 0.3s ease,
-                    box-shadow 0.3s ease;
+            border-radius: 50%;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.08),
+            0 0 24px rgba(255, 255, 255, 0.12);
+            transition: border-color 0.3s ease,
+            box-shadow 0.3s ease;
         }
 
         .camera-status {
@@ -141,9 +139,9 @@
             font-size: 12px;
             font-weight: 600;
             letter-spacing: 0.2px;
-            box-shadow:
-                    0 6px 18px rgba(0, 0, 0, 0.25);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
         }
+
         .instruction-card {
             margin-top: 18px;
             padding: 20px;
@@ -151,8 +149,7 @@
             border-radius: 20px;
             background: rgba(30, 41, 59, 0.78);
             border: 1px solid rgba(148, 163, 184, 0.16);
-            box-shadow:
-                    0 10px 30px rgba(0, 0, 0, 0.16);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
             backdrop-filter: blur(12px);
         }
 
@@ -171,9 +168,8 @@
             line-height: 1.5;
             color: #f8fafc;
             min-height: 27px;
-            transition:
-                    color 0.25s ease,
-                    opacity 0.25s ease;
+            transition: color 0.25s ease,
+            opacity 0.25s ease;
         }
 
         .progress-section {
@@ -182,8 +178,7 @@
             border-radius: 20px;
             background: rgba(15, 23, 42, 0.82);
             border: 1px solid rgba(148, 163, 184, 0.16);
-            box-shadow:
-                    0 10px 30px rgba(0, 0, 0, 0.18);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
         }
 
         .progress-header {
@@ -212,8 +207,7 @@
             border: 1px solid rgba(148, 163, 184, 0.08);
             border-radius: 999px;
             overflow: hidden;
-            box-shadow:
-                    inset 0 1px 3px rgba(0, 0, 0, 0.35);
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
         }
 
         #progressFill {
@@ -225,8 +219,7 @@
                     #38bdf8,
                     #22c55e
             );
-            box-shadow:
-                    0 0 12px rgba(34, 197, 94, 0.25);
+            box-shadow: 0 0 12px rgba(34, 197, 94, 0.25);
             transition: width 0.4s ease;
         }
 
@@ -240,9 +233,8 @@
         }
 
         .progress-steps span {
-            transition:
-                    color 0.25s ease,
-                    transform 0.25s ease;
+            transition: color 0.25s ease,
+            transform 0.25s ease;
         }
 
         .progress-steps span.active {
@@ -270,9 +262,8 @@
             font-size: 15px;
             font-weight: 700;
             cursor: pointer;
-            transition:
-                    transform .2s ease,
-                    opacity .2s ease;
+            transition: transform .2s ease,
+            opacity .2s ease;
         }
 
         button:active {
@@ -281,26 +272,22 @@
 
         .start-btn {
             color: #fff;
-            background:
-                    linear-gradient(
-                            135deg,
-                            #2563eb,
-                            #06b6d4
-                    );
+            background: linear-gradient(
+                    135deg,
+                    #2563eb,
+                    #06b6d4
+            );
             border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow:
-                    0 10px 28px rgba(37, 99, 235, 0.28);
-            transition:
-                    transform 0.2s ease,
-                    opacity 0.2s ease,
-                    box-shadow 0.2s ease,
-                    filter 0.2s ease;
+            box-shadow: 0 10px 28px rgba(37, 99, 235, 0.28);
+            transition: transform 0.2s ease,
+            opacity 0.2s ease,
+            box-shadow 0.2s ease,
+            filter 0.2s ease;
         }
 
         .start-btn:hover {
             filter: brightness(1.08);
-            box-shadow:
-                    0 12px 32px rgba(37, 99, 235, 0.36);
+            box-shadow: 0 12px 32px rgba(37, 99, 235, 0.36);
             transform: translateY(-1px);
         }
 
@@ -308,32 +295,30 @@
             color: #e2e8f0;
             background: rgba(30, 41, 59, 0.9);
             border: 1px solid rgba(148, 163, 184, 0.20);
-            transition:
-                    transform 0.2s ease,
-                    background 0.2s ease,
-                    border-color 0.2s ease;
+            transition: transform 0.2s ease,
+            background 0.2s ease,
+            border-color 0.2s ease;
         }
 
         .stop-btn:hover {
             background: rgba(51, 65, 85, 0.95);
             border-color: rgba(148, 163, 184, 0.35);
         }
+
         .success-card {
             display: none;
             margin-top: 18px;
             padding: 26px 22px;
             text-align: center;
             border-radius: 22px;
-            background:
-                    linear-gradient(
-                            145deg,
-                            rgba(34, 197, 94, 0.14),
-                            rgba(15, 23, 42, 0.72)
-                    );
+            background: linear-gradient(
+                    145deg,
+                    rgba(34, 197, 94, 0.14),
+                    rgba(15, 23, 42, 0.72)
+            );
             border: 1px solid rgba(74, 222, 128, 0.35);
-            box-shadow:
-                    0 16px 40px rgba(0, 0, 0, 0.22),
-                    0 0 30px rgba(34, 197, 94, 0.08);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.22),
+            0 0 30px rgba(34, 197, 94, 0.08);
             backdrop-filter: blur(14px);
             animation: enrollmentSuccess 0.45s ease-out;
         }
@@ -350,8 +335,7 @@
             border: 1px solid rgba(74, 222, 128, 0.3);
             color: #4ade80;
             font-size: 31px;
-            box-shadow:
-                    0 0 25px rgba(34, 197, 94, 0.16);
+            box-shadow: 0 0 25px rgba(34, 197, 94, 0.16);
         }
 
         .success-card h2 {
@@ -371,9 +355,8 @@
 
         .success-state .face-guide {
             border-color: #22c55e;
-            box-shadow:
-                    0 0 0 9999px rgba(0, 0, 0, .12),
-                    0 0 30px rgba(34, 197, 94, .5);
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, .12),
+            0 0 30px rgba(34, 197, 94, .5);
         }
 
         @keyframes enrollmentSuccess {
@@ -388,7 +371,7 @@
             }
         }
 
-        @media(max-width:600px) {
+        @media (max-width: 600px) {
 
             body {
                 padding: 12px;
@@ -412,12 +395,12 @@
             }
 
             .camera-wrapper {
-                border-radius: 14px;
+                border-radius: 50%;
             }
 
             .face-guide {
-                width: 56%;
-                aspect-ratio: 1 / 1.2;
+                width: 92%;
+                aspect-ratio: 1 / 1;
                 height: auto;
             }
 
@@ -492,14 +475,7 @@
 
         <div class="camera-wrapper">
 
-            <video
-                    id="video"
-                    autoplay
-                    muted
-                    playsinline
-                    width="480"
-                    height="360">
-            </video>
+            <video id="video" autoplay muted playsinline></video>
 
             <div class="camera-overlay">
                 <div class="face-guide"></div>
@@ -691,6 +667,14 @@
      */
     let enrollmentCompleting = false;
 
+    let frameCanvas = document.createElement("canvas");
+    frameCanvas.width = 320;
+    frameCanvas.height = 320;
+
+    let frameContext = frameCanvas.getContext("2d", {
+        alpha: false
+    });
+
 
     /* =========================
        START CAMERA
@@ -811,17 +795,10 @@
                 await navigator.mediaDevices.getUserMedia({
 
                     video: {
-
-                        width: {
-                            ideal: 320
-                        },
-
-                        height: {
-                            ideal: 240
-                        },
-
+                        width: {ideal: 640},
+                        height: {ideal: 480},
+                        frameRate: {ideal: 30, max: 30},
                         facingMode: "user"
-
                     },
 
                     audio: false
@@ -885,7 +862,7 @@
         timer =
             setInterval(
                 captureAndSendFrame,
-                300
+                200
             );
 
         console.log(
@@ -901,110 +878,48 @@
 
     async function captureAndSendFrame() {
 
-        if (processing) {
-            return;
-        }
+        if (processing) return;
+        if (!stream) return;
+        if (!livenessSessionId) return;
 
-        if (!stream) {
-            return;
-        }
+        if (video.readyState < 2) return;
+        if (!video.videoWidth || !video.videoHeight) return;
 
-        if (!livenessSessionId) {
-            return;
-        }
-
-        if (video.readyState < 2) {
-
-            console.log(
-                "Video not ready"
-            );
-
-            return;
-        }
-
-        if (
-            video.videoWidth === 0 ||
-            video.videoHeight === 0
-        ) {
-
-            console.log(
-                "Video dimensions unavailable"
-            );
-
-            return;
-        }
-
-
-        /*
-         * Lock frame processing.
-         *
-         * IMPORTANT:
-         * We now keep this locked until
-         * updateStatus() and enrollment
-         * completion are finished.
-         */
         processing = true;
-
 
         try {
 
-            const canvas =
-                document.createElement("canvas");
+            /* =========================
+               CAPTURE SMALL FRAME
+               ========================= */
 
-            canvas.width = 480;
-
-            canvas.height = 360;
+            drawCenteredSquare(video, frameContext, 320);
 
 
-            const ctx =
-                canvas.getContext(
-                    "2d",
-                    {
-                        alpha: false
-                    }
+            /* =========================
+               JPEG ENCODE
+               ========================= */
+
+            const blob = await new Promise(resolve => {
+
+                frameCanvas.toBlob(
+                    resolve,
+                    "image/jpeg",
+                    0.62
                 );
 
-
-            ctx.drawImage(
-                video,
-                0,
-                0,
-                480,
-                360
-            );
-
-
-            const blob =
-                await new Promise(resolve => {
-
-                    canvas.toBlob(
-                        resolve,
-                        "image/jpeg",
-                        0.70
-                    );
-
-                });
-
+            });
 
             if (!blob) {
-
-                console.error(
-                    "Could not create JPEG"
-                );
-
                 return;
             }
 
 
-            console.log(
-                "Captured frame:",
-                blob.size,
-                "bytes"
-            );
+            /* =========================
+               BUILD REQUEST
+               ========================= */
 
-
-            const formData =
-                new FormData();
+            const formData = new FormData();
 
             formData.append(
                 "image",
@@ -1018,9 +933,11 @@
             );
 
 
-            const requestStart =
-                performance.now();
+            /* =========================
+               SEND TO BACKEND
+               ========================= */
 
+            const requestStart = performance.now();
 
             const response = await fetch(
                 "/api/liveness/frame",
@@ -1035,44 +952,28 @@
             if (!response.ok) {
 
                 throw new Error(
-                    "Frame API returned "
-                    + response.status
+                    "Frame API returned " + response.status
                 );
 
             }
 
 
-            const result =
-                await response.json();
+            const result = await response.json();
 
-
-            const requestTime =
-                Math.round(
-                    performance.now()
-                    - requestStart
-                );
-
+            const requestTime = Math.round(
+                performance.now() - requestStart
+            );
 
             console.log(
-                "Liveness response:",
-                result,
-                "Request time:",
-                requestTime + " ms"
+                "Liveness:",
+                result.status,
+                "|",
+                requestTime + " ms",
+                "|",
+                blob.size + " bytes"
             );
 
 
-            /*
-             * IMPORTANT FIX:
-             *
-             * Await updateStatus().
-             *
-             * Previously this was:
-             *
-             * updateStatus(result);
-             *
-             * which allowed processing=false
-             * while enrollment was still running.
-             */
             await updateStatus(result);
 
 
@@ -1086,17 +987,30 @@
             status.innerText =
                 "⚠️ Frame processing error";
 
-
         } finally {
 
-            /*
-             * Release the frame lock only after
-             * updateStatus/enrollment finishes.
-             */
             processing = false;
 
         }
+    }
 
+    /* Crop the same centered square shown by the circular camera preview. */
+    function drawCenteredSquare(source, context, outputSize) {
+        const side = Math.min(source.videoWidth, source.videoHeight);
+        const sourceX = (source.videoWidth - side) / 2;
+        const sourceY = (source.videoHeight - side) / 2;
+
+        context.drawImage(
+            source,
+            sourceX,
+            sourceY,
+            side,
+            side,
+            0,
+            0,
+            outputSize,
+            outputSize
+        );
     }
 
 
@@ -1416,9 +1330,8 @@
             const canvas =
                 document.createElement("canvas");
 
-            canvas.width = 480;
-
-            canvas.height = 360;
+            canvas.width = 320;
+            canvas.height = 320;
 
 
             const ctx =
@@ -1430,13 +1343,7 @@
                 );
 
 
-            ctx.drawImage(
-                video,
-                0,
-                0,
-                480,
-                360
-            );
+            drawCenteredSquare(video, ctx, 320);
 
 
             const blob =
@@ -1445,7 +1352,7 @@
                     canvas.toBlob(
                         resolve,
                         "image/jpeg",
-                        0.85
+                        0.80
                     );
 
                 });

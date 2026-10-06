@@ -110,8 +110,8 @@
 
         .camera-wrapper {
             position: relative;
-            width: 360px;
-            height: 360px;
+            width: min(360px, 90vw);
+            aspect-ratio: 1 / 1;
             margin: 0 auto;
             overflow: hidden;
             border-radius: 50%;
@@ -123,6 +123,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            border-radius: 50%;
             background: #000;
         }
 
@@ -152,7 +153,7 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 70%;
+            width: 92%;
             aspect-ratio: 1;
             transform: translate(-50%, -50%);
             border: 2px solid rgba(255, 255, 255, 0.75);
@@ -697,12 +698,13 @@
             }
 
             .camera-wrapper {
-                border-radius: 14px;
+                border-radius: 50%;
             }
 
             .face-guide {
-                width: 58%;
-                height: 68%;
+                width: 92%;
+                height: auto;
+                aspect-ratio: 1;
             }
 
             #status {
@@ -749,8 +751,8 @@
             }
 
             .face-guide {
-                width: 56%;
-                aspect-ratio: 1 / 1.2;
+                width: 92%;
+                aspect-ratio: 1 / 1;
                 height: auto;
             }
 
@@ -1116,19 +1118,13 @@
             const testCanvas =
                 document.createElement("canvas");
 
-            testCanvas.width = 480;
-            testCanvas.height = 360;
+            testCanvas.width = 320;
+            testCanvas.height = 320;
 
             const ctx =
                 testCanvas.getContext("2d");
 
-            ctx.drawImage(
-                video,
-                0,
-                0,
-                480,
-                360
-            );
+            drawCenteredSquare(video, ctx, 320);
 
             const blob =
                 await new Promise(resolve => {
@@ -1368,7 +1364,7 @@
         timer =
             setInterval(
                 captureAndSendFrame,
-                300
+                200
             );
 
 
@@ -1426,18 +1422,8 @@
 
         try {
 
-            const width =
-                video.videoWidth;
-
-            const height =
-                video.videoHeight;
-
-
-            canvas.width =
-                width;
-
-            canvas.height =
-                height;
+            canvas.width = 320;
+            canvas.height = 320;
 
 
             const ctx =
@@ -1449,13 +1435,7 @@
                 );
 
 
-            ctx.drawImage(
-                video,
-                0,
-                0,
-                width,
-                height
-            );
+            drawCenteredSquare(video, ctx, 320);
 
 
             const blob =
@@ -1465,7 +1445,7 @@
                         canvas.toBlob(
                             resolve,
                             "image/jpeg",
-                            0.70
+                            0.62
                         );
 
                     }
@@ -1573,6 +1553,25 @@
 
     }
 
+    /* Match the square source area visible in the circular camera preview. */
+    function drawCenteredSquare(source, context, outputSize) {
+        const side = Math.min(source.videoWidth, source.videoHeight);
+        const sourceX = (source.videoWidth - side) / 2;
+        const sourceY = (source.videoHeight - side) / 2;
+
+        context.drawImage(
+            source,
+            sourceX,
+            sourceY,
+            side,
+            side,
+            0,
+            0,
+            outputSize,
+            outputSize
+        );
+    }
+
 
     /*
      * UPDATE UI
@@ -1594,19 +1593,13 @@
             const canvas =
                 document.createElement("canvas");
 
-            canvas.width = 480;
-            canvas.height = 360;
+            canvas.width = 320;
+            canvas.height = 320;
 
             const ctx =
                 canvas.getContext("2d");
 
-            ctx.drawImage(
-                video,
-                0,
-                0,
-                canvas.width,
-                canvas.height
-            );
+            drawCenteredSquare(video, ctx, 320);
 
             const blob =
                 await new Promise(resolve => {
