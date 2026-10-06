@@ -31,6 +31,7 @@ public class FaceDetectionController {
     private final LivenessDetectionService livenessDetectionService;
     private final EnrollmentSessionService enrollmentSessionService;
     private final LiveLivenessService liveLivenessService;
+    private final FaceAntiSpoofService faceAntiSpoofService;
 
     public FaceDetectionController(
             ScrfdDetectionService detectionService,
@@ -40,7 +41,8 @@ public class FaceDetectionController {
             FaceRecognitionService faceRecognitionService,
             LivenessDetectionService livenessDetectionService,
             EnrollmentSessionService enrollmentSessionService,
-            LiveLivenessService liveLivenessService) {
+            LiveLivenessService liveLivenessService,
+            FaceAntiSpoofService faceAntiSpoofService) {
 
         this.detectionService = detectionService;
 
@@ -51,6 +53,7 @@ public class FaceDetectionController {
         this.livenessDetectionService = livenessDetectionService;
         this.enrollmentSessionService = enrollmentSessionService;
         this.liveLivenessService = liveLivenessService;
+        this.faceAntiSpoofService = faceAntiSpoofService;
     }
 
     @PostMapping("/detect")
@@ -268,6 +271,66 @@ public class FaceDetectionController {
             input.release();
         }
     }
+
+    @PostMapping("/anti-spoof-test")
+    public ResponseEntity<?> antiSpoofTest(
+            @RequestParam("image") MultipartFile image) throws Exception {
+
+        List<FaceDetection> faces =
+                detectionService.detectFaces(image);
+
+        if (faces.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "No face detected"));
+        }
+
+        if (faces.size() > 1) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Multiple faces detected"));
+        }
+
+        Mat input =
+                Imgcodecs.imdecode(
+                        new MatOfByte(image.getBytes()),
+                        Imgcodecs.IMREAD_COLOR
+                );
+
+        if (input.empty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Could not decode image"));
+        }
+
+        try {
+
+            FaceDetection face = faces.get(0);
+
+            Mat aligned =
+                    faceAligner.align(
+                            input,
+                            face.getLandmarks()
+                    );
+
+            try {
+
+                float[] scores =
+                        faceAntiSpoofService.predict(aligned);
+
+                return ResponseEntity.ok(
+                        Map.of(
+                                "score0", scores[0],
+                                "score1", scores[1]
+                        )
+                );
+
+            } finally {
+                aligned.release();
+            }
+
+        } finally {
+            input.release();
+        }
+    }
+
 
     @PostMapping("/verify")
     public ResponseEntity<?> verify(

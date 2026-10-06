@@ -74,7 +74,8 @@ public class SecurityConfig {
                                 "/api/faces/live-frame",
                                 "/api/faces/live-verify",
                                 "/api/faces/detect",
-                                "/api/liveness/**"
+                                "/api/liveness/**",
+                                "/api/faces/anti-spoof-test"
                         ).permitAll()
 
                         // 5. All other API endpoints require JWT authentication

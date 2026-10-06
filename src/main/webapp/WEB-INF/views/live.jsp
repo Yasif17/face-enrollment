@@ -430,6 +430,47 @@
             transform 0.25s ease;
         }
 
+        .verification-checks {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px 18px;
+            margin-top: 16px;
+        }
+
+        .verification-check {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            transition: color 0.2s ease;
+        }
+
+        .verification-check .check-dot {
+            display: inline-flex;
+            width: 20px;
+            height: 20px;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(148, 163, 184, 0.45);
+            border-radius: 50%;
+            color: transparent;
+            font-size: 12px;
+            transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        .verification-check.complete {
+            color: #bbf7d0;
+        }
+
+        .verification-check.complete .check-dot {
+            background: #16a34a;
+            border-color: #4ade80;
+            color: #fff;
+        }
+
         /* =========================
            CONTROLS
         ========================= */
@@ -869,7 +910,7 @@
         <div class="status-card">
 
             <div class="status-label">
-                Liveness & Recognition
+                Turn left, turn right, and blink once
             </div>
 
             <div id="status">
@@ -917,6 +958,18 @@
 
             </div>
 
+            <div class="verification-checks" aria-live="polite">
+                <span class="verification-check" id="leftTurnCheck">
+                    <span class="check-dot" aria-hidden="true">✓</span>Turn left
+                </span>
+                <span class="verification-check" id="rightTurnCheck">
+                    <span class="check-dot" aria-hidden="true">✓</span>Turn right
+                </span>
+                <span class="verification-check" id="blinkCheck">
+                    <span class="check-dot" aria-hidden="true">✓</span>Blink once
+                </span>
+            </div>
+
         </div>
 
 
@@ -929,37 +982,6 @@
             </button>
 
         </div>
-
-        <button
-                id="antiSpoofButton"
-                type="button"
-                disabled
-                style="
-            width: 100%;
-            margin-top: 10px;
-            padding: 14px;
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 15px;
-            font-size: 15px;
-            font-weight: 700;
-            cursor: pointer;
-            color: #ffffff;
-            background: linear-gradient(135deg, #7c3aed, #ec4899);
-        ">
-            🛡️ Test Anti-Spoof
-        </button>
-
-        <div
-                id="antiSpoofResult"
-                style="
-            margin-top: 12px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 600;
-            color: #cbd5e1;
-        ">
-        </div>
-
 
         <!-- RESULT -->
 
@@ -1042,11 +1064,9 @@
     const startButton =
         document.getElementById("startButton");
 
-    const antiSpoofButton =
-        document.getElementById("antiSpoofButton");
-
-    const antiSpoofResult =
-        document.getElementById("antiSpoofResult");
+    const leftTurnCheck = document.getElementById("leftTurnCheck");
+    const rightTurnCheck = document.getElementById("rightTurnCheck");
+    const blinkCheck = document.getElementById("blinkCheck");
 
     const statusText =
         document.getElementById("status");
@@ -1082,6 +1102,14 @@
     let livenessSessionId = null;
     let livenessPassedHandled = false;
 
+    function setCheckComplete(element, complete) {
+        element.classList.toggle("complete", complete);
+        element.setAttribute(
+            "aria-label",
+            element.textContent.trim() + (complete ? ": complete" : ": pending")
+        );
+    }
+
 
     startButton.addEventListener(
         "click",
@@ -1091,129 +1119,6 @@
     /*
      * START CAMERA
      */
-
-    antiSpoofButton.addEventListener(
-        "click",
-        testAntiSpoof
-    );
-
-
-    async function testAntiSpoof() {
-
-        if (!stream || video.readyState < 2) {
-
-            antiSpoofResult.innerText =
-                "❌ Start the camera first.";
-
-            return;
-        }
-
-        try {
-
-            antiSpoofButton.disabled = true;
-
-            antiSpoofResult.innerText =
-                "🔍 Checking anti-spoof...";
-
-            const testCanvas =
-                document.createElement("canvas");
-
-            testCanvas.width = 320;
-            testCanvas.height = 320;
-
-            const ctx =
-                testCanvas.getContext("2d");
-
-            drawCenteredSquare(video, ctx, 320);
-
-            const blob =
-                await new Promise(resolve => {
-
-                    testCanvas.toBlob(
-                        resolve,
-                        "image/jpeg",
-                        0.80
-                    );
-
-                });
-
-            if (!blob) {
-                throw new Error(
-                    "Could not capture camera frame"
-                );
-            }
-
-            const formData =
-                new FormData();
-
-            formData.append(
-                "image",
-                blob,
-                "antispoof-test.jpg"
-            );
-
-            const response =
-                await fetch(
-                    "/api/antispoof/check",
-                    {
-                        method: "POST",
-                        body: formData
-                    }
-                );
-
-            const result =
-                await response.json();
-
-            console.log(
-                "ANTI-SPOOF RESULT:",
-                result
-            );
-
-            if (result.status === "NO_FACE") {
-
-                antiSpoofResult.innerText =
-                    "❌ No face detected";
-
-            } else if (
-                result.status === "MULTIPLE_FACES"
-            ) {
-
-                antiSpoofResult.innerText =
-                    "❌ Multiple faces detected";
-
-            } else if (
-                result.status === "OK"
-            ) {
-
-                antiSpoofResult.innerText =
-                    "🛡️ Class 0: "
-                    + Number(result.class0).toFixed(4)
-                    + " | Class 1: "
-                    + Number(result.class1).toFixed(4);
-
-            } else {
-
-                antiSpoofResult.innerText =
-                    "⚠️ "
-                    + (result.message || "Test failed");
-            }
-
-        } catch (error) {
-
-            console.error(
-                "ANTI-SPOOF ERROR:",
-                error
-            );
-
-            antiSpoofResult.innerText =
-                "❌ Anti-spoof test failed: "
-                + error.message;
-
-        } finally {
-
-            antiSpoofButton.disabled = false;
-        }
-    }
 
     async function startCamera() {
 
@@ -1231,6 +1136,10 @@
 
             progressBar.style.width =
                 "0%";
+
+            setCheckComplete(leftTurnCheck, false);
+            setCheckComplete(rightTurnCheck, false);
+            setCheckComplete(blinkCheck, false);
 
             progressText.innerText =
                 "0%";
@@ -1299,7 +1208,7 @@
 
             await video.play();
 
-            antiSpoofButton.disabled = false;
+
 
 
             cameraIndicator.innerText =
@@ -1364,7 +1273,7 @@
         timer =
             setInterval(
                 captureAndSendFrame,
-                200
+                100
             );
 
 
@@ -1513,6 +1422,10 @@
 
             const result =
                 await response.json();
+
+            if (result.blinkDetected) {
+                setCheckComplete(blinkCheck, true);
+            }
 
 
             const requestTime =
@@ -1761,6 +1674,8 @@
             displayChallenge = "TURN_RIGHT";
         } else if (displayChallenge === "TURN_RIGHT") {
             displayChallenge = "TURN_LEFT";
+        } else if (displayChallenge === "BLINK") {
+            displayChallenge = "Blink once (close and reopen both eyes)";
         }
 
 
@@ -1790,6 +1705,10 @@
 
             movementCountText.innerText =
                 Math.floor(progress / 20);
+
+            // The visible prompt swaps directions to match the mirrored preview.
+            setCheckComplete(rightTurnCheck, progress >= 50);
+            setCheckComplete(leftTurnCheck, progress >= 80 || result.livenessPassed === true);
         }
 
 
@@ -1899,6 +1818,26 @@
 
         }
 
+        if (result.challenge === "BLINK" && !result.livenessPassed) {
+            const leftOpen = Number(result.leftEyeOpenProbability || 0);
+            const rightOpen = Number(result.rightEyeOpenProbability || 0);
+            const scores =
+                "Left eye " + Math.round(leftOpen * 100) + "% · Right eye "
+                + Math.round(rightOpen * 100) + "%";
+
+            if (leftOpen >= 0.65 && rightOpen >= 0.65) {
+                statusText.textContent = scores + " — close and reopen both eyes";
+            } else if (leftOpen <= 0.35 && rightOpen <= 0.35) {
+                statusText.textContent = scores + " — now open your eyes";
+            } else {
+                statusText.textContent = scores + " — keep your face straight and blink";
+            }
+
+            statusText.classList.remove("success", "error");
+            statusText.classList.add("warning");
+            return;
+        }
+
 
         /*
          * SUCCESS
@@ -1992,7 +1931,7 @@
 
         video.srcObject = null;
 
-        antiSpoofButton.disabled = true;
+
 
         processing = false;
 

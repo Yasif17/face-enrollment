@@ -102,9 +102,9 @@ public class FaceAntiSpoofService {
                         /*
                          * RGB
                          */
-                        float r = (float) values[0];
-                        float g = (float) values[1];
-                        float b = (float) values[2];
+                        float r = (float) values[0] / 255.0f;
+                        float g = (float) values[1] / 255.0f;
+                        float b = (float) values[2] / 255.0f;
 
                         int index =
                                 y * INPUT_SIZE + x;

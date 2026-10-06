@@ -725,13 +725,23 @@
                START ENROLLMENT SESSION
                ========================= */
 
-            const enrollmentResponse = await fetch(
-                "/api/faces/enrollment/start",
-                {
-                    method: "POST",
-                    headers: getAuthHeaders()
-                }
-            );
+            const authHeaders = getAuthHeaders();
+            const [enrollmentResponse, sessionResponse] = await Promise.all([
+                fetch(
+                    "/api/faces/enrollment/start",
+                    {
+                        method: "POST",
+                        headers: authHeaders
+                    }
+                ),
+                fetch(
+                    "/api/liveness/start",
+                    {
+                        method: "POST",
+                        headers: authHeaders
+                    }
+                )
+            ]);
 
             if (!enrollmentResponse.ok) {
 
@@ -742,30 +752,6 @@
 
             }
 
-            const enrollmentSession =
-                await enrollmentResponse.json();
-
-            enrollmentSessionId =
-                enrollmentSession.sessionId;
-
-            console.log(
-                "Enrollment session:",
-                enrollmentSession
-            );
-
-
-            /* =========================
-               START LIVENESS SESSION
-               ========================= */
-
-            const sessionResponse = await fetch(
-                "/api/liveness/start",
-                {
-                    method: "POST",
-                    headers: getAuthHeaders()
-                }
-            );
-
             if (!sessionResponse.ok) {
 
                 throw new Error(
@@ -775,8 +761,13 @@
 
             }
 
-            const session =
-                await sessionResponse.json();
+            const [enrollmentSession, session] = await Promise.all([
+                enrollmentResponse.json(),
+                sessionResponse.json()
+            ]);
+
+            enrollmentSessionId = enrollmentSession.sessionId;
+            console.log("Enrollment session:", enrollmentSession);
 
             livenessSessionId =
                 session.sessionId;
@@ -797,7 +788,6 @@
                     video: {
                         width: {ideal: 640},
                         height: {ideal: 480},
-                        frameRate: {ideal: 30, max: 30},
                         facingMode: "user"
                     },
 
@@ -862,7 +852,7 @@
         timer =
             setInterval(
                 captureAndSendFrame,
-                200
+                100
             );
 
         console.log(
@@ -943,7 +933,6 @@
                 "/api/liveness/frame",
                 {
                     method: "POST",
-                    headers: getAuthHeaders(),
                     body: formData
                 }
             );
@@ -1030,6 +1019,8 @@
             displayChallenge = "TURN_RIGHT";
         } else if (displayChallenge === "TURN_RIGHT") {
             displayChallenge = "TURN_LEFT";
+        } else if (displayChallenge === "BLINK") {
+            displayChallenge = "Blink once (close and reopen both eyes)";
         }
 
 
@@ -1141,6 +1132,23 @@
             status.innerText =
                 "📐 Keep your head straight...";
 
+            return;
+        }
+
+        if (result.challenge === "BLINK" && !result.livenessPassed) {
+            const leftOpen = Number(result.leftEyeOpenProbability || 0);
+            const rightOpen = Number(result.rightEyeOpenProbability || 0);
+            const scores =
+                "Left eye " + Math.round(leftOpen * 100) + "% · Right eye "
+                + Math.round(rightOpen * 100) + "%";
+
+            if (leftOpen >= 0.65 && rightOpen >= 0.65) {
+                status.innerText = scores + " — close and reopen both eyes";
+            } else if (leftOpen <= 0.35 && rightOpen <= 0.35) {
+                status.innerText = scores + " — now open your eyes";
+            } else {
+                status.innerText = scores + " — keep your face straight and blink";
+            }
             return;
         }
 

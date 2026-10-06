@@ -16,16 +16,20 @@ import java.util.concurrent.ConcurrentHashMap;
 public class LiveLivenessService {
 
     private final ScrfdDetectionService detectionService;
+    private final EyeStateModelService eyeStateModelService;
 
     private final ConcurrentHashMap<String, LivenessSession> sessions =
             new ConcurrentHashMap<>();
     private final CurrentUserService currentUserService;
 
     public LiveLivenessService(
-            ScrfdDetectionService detectionService,CurrentUserService currentUserService) {
+            ScrfdDetectionService detectionService,
+            CurrentUserService currentUserService,
+            EyeStateModelService eyeStateModelService) {
 
         this.detectionService = detectionService;
         this.currentUserService = currentUserService;
+        this.eyeStateModelService = eyeStateModelService;
     }
 
     // =========================================================
@@ -139,6 +143,9 @@ public class LiveLivenessService {
             );
         }
 
+        EyeStateModelService.EyeProbabilities eyeState =
+                eyeStateModelService.classify(image, face);
+
         /*
          * SCRFD landmarks:
          *
@@ -157,6 +164,9 @@ public class LiveLivenessService {
 
         Point nose =
                 landmarks[2];
+
+        boolean blinkDetected =
+                updateBlinkChallenge(session, eyeState);
 
         // =====================================================
         // HEAD TURN MEASUREMENT
@@ -391,14 +401,8 @@ public class LiveLivenessService {
 
             if (session.rightConfirmations >= 3) {
 
-                session.challenge =
-                        "COMPLETED";
-
-                session.progress =
-                        100;
-
-                session.livenessPassed =
-                        true;
+                session.challenge = "BLINK";
+                session.progress = 80;
 
                 session.rightConfirmations =
                         0;
@@ -408,7 +412,7 @@ public class LiveLivenessService {
                 );
 
                 System.out.println(
-                        "LIVENESS PASSED"
+                        "HEAD TURNS PASSED - NOW ASK USER TO BLINK"
                 );
 
                 System.out.println(
@@ -426,8 +430,48 @@ public class LiveLivenessService {
                 "FACE_DETECTED",
                 session.challenge,
                 session.progress,
-                session.livenessPassed
+                session.livenessPassed,
+                blinkDetected,
+                eyeState.leftOpen(),
+                eyeState.rightOpen()
         );
+    }
+
+    private boolean updateBlinkChallenge(
+            LivenessSession session,
+            EyeStateModelService.EyeProbabilities eyeState) {
+
+        if (!"BLINK".equals(session.challenge)) {
+            return false;
+        }
+
+        boolean bothOpen =
+                eyeState.leftOpen() >= 0.65f &&
+                eyeState.rightOpen() >= 0.65f;
+        boolean bothClosed =
+                eyeState.leftOpen() <= 0.35f &&
+                eyeState.rightOpen() <= 0.35f;
+
+        if (bothOpen && !session.blinkArmed) {
+            session.blinkArmed = true;
+            return false;
+        }
+
+        if (session.blinkArmed && bothClosed) {
+            session.eyesClosed = true;
+            return false;
+        }
+
+        if (session.blinkArmed && session.eyesClosed && bothOpen) {
+            session.challenge = "COMPLETED";
+            session.progress = 100;
+            session.livenessPassed = true;
+            session.blinkArmed = false;
+            session.eyesClosed = false;
+            return true;
+        }
+
+        return false;
     }
 
     // =========================================================
@@ -469,8 +513,19 @@ public class LiveLivenessService {
             String status,
             String challenge,
             int progress,
-            boolean livenessPassed
+            boolean livenessPassed,
+            boolean blinkDetected,
+            float leftEyeOpenProbability,
+            float rightEyeOpenProbability
     ) {
+        public FrameResult(
+                boolean faceDetected,
+                String status,
+                String challenge,
+                int progress,
+                boolean livenessPassed) {
+            this(faceDetected, status, challenge, progress, livenessPassed, false, 0.0f, 0.0f);
+        }
     }
 
 
@@ -489,6 +544,9 @@ public class LiveLivenessService {
 
         private boolean livenessPassed =
                 false;
+
+        private boolean blinkArmed = false;
+        private boolean eyesClosed = false;
 
         /*
          * Last calculated nose position.
