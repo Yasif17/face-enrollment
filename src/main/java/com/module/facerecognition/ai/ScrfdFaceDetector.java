@@ -40,7 +40,7 @@ public class ScrfdFaceDetector {
                 new OrtSession.SessionOptions();
 
         session = environment.createSession(
-                "src/main/resources/models/det_10g.onnx",
+                "src/main/resources/models/det_500m.onnx",
                 options
         );
 

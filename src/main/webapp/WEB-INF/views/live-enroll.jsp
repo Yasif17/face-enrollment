@@ -35,6 +35,11 @@
             padding: 20px;
         }
 
+        #video {
+            transform: scaleX(-1) !important;
+            transform-origin: center;
+        }
+
         .page {
             width: 100%;
             max-width: 760px;
@@ -1105,6 +1110,14 @@
             return;
         }
 
+        let displayChallenge = result.challenge;
+
+        if (displayChallenge === "TURN_LEFT") {
+            displayChallenge = "TURN_RIGHT";
+        } else if (displayChallenge === "TURN_RIGHT") {
+            displayChallenge = "TURN_LEFT";
+        }
+
 
         /* =========================
            PROGRESS
@@ -1313,7 +1326,7 @@
 
         status.innerText =
             "👉 "
-            + result.challenge
+            + displayChallenge
             + " | Progress: "
             + result.progress
             + "%";

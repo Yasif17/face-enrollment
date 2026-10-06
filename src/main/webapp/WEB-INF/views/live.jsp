@@ -59,6 +59,11 @@
             margin: 25px 0 22px;
         }
 
+        #video {
+            transform: scaleX(-1) !important;
+            transform-origin: center;
+        }
+
         .header-icon {
             width: 58px;
             height: 58px;
@@ -105,21 +110,19 @@
 
         .camera-wrapper {
             position: relative;
+            width: 360px;
+            height: 360px;
+            margin: 0 auto;
             overflow: hidden;
-            border-radius: 20px;
+            border-radius: 50%;
             background: #000;
-            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
         }
 
         video {
             display: block;
-
             width: 100%;
-
-            aspect-ratio: 4 / 3;
-
+            height: 100%;
             object-fit: cover;
-
             background: #000;
         }
 
@@ -149,11 +152,11 @@
             position: absolute;
             top: 50%;
             left: 50%;
-            width: 46%;
-            aspect-ratio: 1 / 1.2;
+            width: 70%;
+            aspect-ratio: 1;
             transform: translate(-50%, -50%);
             border: 2px solid rgba(255, 255, 255, 0.75);
-            border-radius: 48% 48% 45% 45%;
+            border-radius: 50%;
             box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.08),
             0 0 24px rgba(255, 255, 255, 0.12);
             pointer-events: none;
@@ -925,6 +928,36 @@
 
         </div>
 
+        <button
+                id="antiSpoofButton"
+                type="button"
+                disabled
+                style="
+            width: 100%;
+            margin-top: 10px;
+            padding: 14px;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 15px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #ffffff;
+            background: linear-gradient(135deg, #7c3aed, #ec4899);
+        ">
+            🛡️ Test Anti-Spoof
+        </button>
+
+        <div
+                id="antiSpoofResult"
+                style="
+            margin-top: 12px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: #cbd5e1;
+        ">
+        </div>
+
 
         <!-- RESULT -->
 
@@ -1007,6 +1040,12 @@
     const startButton =
         document.getElementById("startButton");
 
+    const antiSpoofButton =
+        document.getElementById("antiSpoofButton");
+
+    const antiSpoofResult =
+        document.getElementById("antiSpoofResult");
+
     const statusText =
         document.getElementById("status");
 
@@ -1047,10 +1086,138 @@
         startCamera
     );
 
-
     /*
      * START CAMERA
      */
+
+    antiSpoofButton.addEventListener(
+        "click",
+        testAntiSpoof
+    );
+
+
+    async function testAntiSpoof() {
+
+        if (!stream || video.readyState < 2) {
+
+            antiSpoofResult.innerText =
+                "❌ Start the camera first.";
+
+            return;
+        }
+
+        try {
+
+            antiSpoofButton.disabled = true;
+
+            antiSpoofResult.innerText =
+                "🔍 Checking anti-spoof...";
+
+            const testCanvas =
+                document.createElement("canvas");
+
+            testCanvas.width = 480;
+            testCanvas.height = 360;
+
+            const ctx =
+                testCanvas.getContext("2d");
+
+            ctx.drawImage(
+                video,
+                0,
+                0,
+                480,
+                360
+            );
+
+            const blob =
+                await new Promise(resolve => {
+
+                    testCanvas.toBlob(
+                        resolve,
+                        "image/jpeg",
+                        0.80
+                    );
+
+                });
+
+            if (!blob) {
+                throw new Error(
+                    "Could not capture camera frame"
+                );
+            }
+
+            const formData =
+                new FormData();
+
+            formData.append(
+                "image",
+                blob,
+                "antispoof-test.jpg"
+            );
+
+            const response =
+                await fetch(
+                    "/api/antispoof/check",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+            const result =
+                await response.json();
+
+            console.log(
+                "ANTI-SPOOF RESULT:",
+                result
+            );
+
+            if (result.status === "NO_FACE") {
+
+                antiSpoofResult.innerText =
+                    "❌ No face detected";
+
+            } else if (
+                result.status === "MULTIPLE_FACES"
+            ) {
+
+                antiSpoofResult.innerText =
+                    "❌ Multiple faces detected";
+
+            } else if (
+                result.status === "OK"
+            ) {
+
+                antiSpoofResult.innerText =
+                    "🛡️ Class 0: "
+                    + Number(result.class0).toFixed(4)
+                    + " | Class 1: "
+                    + Number(result.class1).toFixed(4);
+
+            } else {
+
+                antiSpoofResult.innerText =
+                    "⚠️ "
+                    + (result.message || "Test failed");
+            }
+
+        } catch (error) {
+
+            console.error(
+                "ANTI-SPOOF ERROR:",
+                error
+            );
+
+            antiSpoofResult.innerText =
+                "❌ Anti-spoof test failed: "
+                + error.message;
+
+        } finally {
+
+            antiSpoofButton.disabled = false;
+        }
+    }
 
     async function startCamera() {
 
@@ -1135,6 +1302,8 @@
                 stream;
 
             await video.play();
+
+            antiSpoofButton.disabled = false;
 
 
             cameraIndicator.innerText =
@@ -1593,6 +1762,14 @@
             return;
         }
 
+        let displayChallenge = result.challenge;
+
+        if (displayChallenge === "TURN_LEFT") {
+            displayChallenge = "TURN_RIGHT";
+        } else if (displayChallenge === "TURN_RIGHT") {
+            displayChallenge = "TURN_LEFT";
+        }
+
 
         /*
          * Progress from backend
@@ -1771,7 +1948,7 @@
 
         statusText.innerText =
             "👉 "
-            + result.challenge
+            + displayChallenge
             + " | Progress: "
             + result.progress
             + "%";
@@ -1821,6 +1998,8 @@
 
 
         video.srcObject = null;
+
+        antiSpoofButton.disabled = true;
 
         processing = false;
 

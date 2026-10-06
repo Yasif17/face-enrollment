@@ -62,7 +62,8 @@ public class SecurityConfig {
                                 // PWA files
                                 "/manifest.json",
                                 "/sw.js",
-                                "/icons/**"
+                                "/icons/**",
+                                "/api/antispoof/**"
                         ).permitAll()
 
                         // 3. Allow authentication endpoints (login, register)

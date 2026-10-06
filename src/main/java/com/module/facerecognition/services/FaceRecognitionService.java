@@ -48,7 +48,7 @@ public class FaceRecognitionService {
      * Keep your existing value for now.
      * We can calibrate this later using real samples.
      */
-    private static final double RECOGNITION_THRESHOLD = 0.75;
+    private static final double RECOGNITION_THRESHOLD = 0.55;
 
 
     /*
